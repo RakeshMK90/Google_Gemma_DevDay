@@ -4,4 +4,5 @@ sounddevice
 numpy
 faiss-cpu
 sentence-transformers
-pyaudio 
+pyaudio
+PyPDF2 

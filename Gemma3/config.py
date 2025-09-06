@@ -79,4 +79,15 @@ FAISS_CONFIG = {
 WHISPER_CONFIG = {
     "model": "tiny",      # Model size: tiny, base, small, medium, large
     "language": "en"      # Language for transcription
+}
+
+# PDF RAG Configuration
+PDF_CONFIG = {
+    "chunk_size": 500,          # Words per chunk (optimized for Jetson memory)
+    "chunk_overlap": 50,        # Overlap between chunks for context preservation
+    "pdf_directory": "./pdfs",  # Default directory for PDFs
+    "cache_directory": "./rag_cache",  # Cache for processed embeddings
+    "batch_size": 32,           # Embedding batch size for memory efficiency
+    "max_file_size_mb": 50,     # Maximum PDF file size (MB)
+    "supported_extensions": [".pdf"]  # Supported file extensions
 } 
