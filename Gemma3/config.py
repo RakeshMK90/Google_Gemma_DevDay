@@ -3,11 +3,29 @@ Configuration file for the Ollama Voice Assistant
 Easy to modify settings without changing the main code
 """
 
-# Ollama Configuration
+# Deployment Configuration
+DEPLOYMENT_TYPE = "podman"  # Choose: "ollama" or "podman"
+
+# Ollama Configuration (legacy)
 OLLAMA_URL = "http://127.0.0.1:11434/api/generate"
 
+# Podman Configuration
+PODMAN_CONFIG = {
+    "container_name": "ramalama_gemma3",
+    "port": 8080,
+    "api_url": "http://127.0.0.1:8080",
+    "model_alias": "ggml-org/gemma-3-4b-it-GGUF",
+    "image": "ghcr.io/rakeshmk90/ramalama-jetson:latest",
+    "auto_start": True,  # Auto-start container if not running
+    "model_paths": {
+        "main_model": "/home/rakesh/.local/share/ramalama/store/huggingface/ggml-org/gemma-3-4b-it-GGUF/blobs/sha256-882e8d2db44dc554fb0ea5077cb7e4bc49e7342a1f0da57901c0802ea21a0863",
+        "mmproj_model": "/home/rakesh/.local/share/ramalama/store/huggingface/ggml-org/gemma-3-4b-it-GGUF/blobs/sha256-8c0fb064b019a6972856aaae2c7e4792858af3ca4561be2dbf649123ba6c40cb"
+    }
+}
+
 # Model Configuration
-MODEL_NAME = "gemma3n:e2b"  # Change this to use different models
+MODEL_NAME = "gemma3n:e2b"  # Ollama model name (when using Ollama)
+PODMAN_MODEL_NAME = PODMAN_CONFIG["model_alias"]  # Podman model alias
 
 # Available Models (uncomment the one you want to use):
 # MODEL_NAME = "gemma3n:e2b"    # Efficient, ~2B parameters, ~2GB VRAM

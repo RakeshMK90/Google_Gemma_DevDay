@@ -1,12 +1,59 @@
-# Voice Assistant with Ollama + Gemma3n
+# Voice Assistant with Gemma3n Models
 
-A modern voice assistant implementation using Ollama and Google's Gemma3n models, specifically optimized for the Jetson Orin Nano platform.
+A modern voice assistant implementation supporting both Ollama and Podman containerized deployments with Google's Gemma3n models, specifically optimized for the Jetson Orin Nano platform.
+
+## Deployment Options
+
+This project now supports two deployment methods:
+
+1. **Podman + LLaMA Server** (Recommended) - Containerized deployment using ramalama
+2. **Ollama** (Legacy) - Direct Ollama installation
+
+Choose your deployment method by editing `DEPLOYMENT_TYPE` in `config.py`.
 
 ## Quick Setup
 
-### 1. Install Ollama
+### Option 1: Podman Deployment (Recommended)
 
-**Jetson Orin Nano:**
+**1. Install Dependencies:**
+```bash
+cd Gemma3
+pip install -r requirements.txt
+```
+
+**2. Configure for Podman:**
+Edit `config.py` and set:
+```python
+DEPLOYMENT_TYPE = "podman"
+```
+
+**3. Update Model Paths:**
+Edit the `model_paths` in `PODMAN_CONFIG` in `config.py` to match your system:
+```python
+PODMAN_CONFIG = {
+    # ... other settings ...
+    "model_paths": {
+        "main_model": "/path/to/your/gemma-3-4b-it-Q4_K_M.gguf",
+        "mmproj_model": "/path/to/your/mmproj-model-f16.gguf"
+    }
+}
+```
+
+**4. Run the Assistant:**
+```bash
+# Test the setup first
+python test_podman.py
+
+# Run full voice assistant
+python assistant_podman.py
+
+# Or run text-only demo
+python demo_text_podman.py
+```
+
+### Option 2: Ollama Deployment (Legacy)
+
+**1. Install Ollama:**
 ```bash
 # Use the Jetson-specific setup script
 ./jetson_setup.sh
@@ -15,16 +62,12 @@ A modern voice assistant implementation using Ollama and Google's Gemma3n models
 curl -fsSL https://ollama.ai/install.sh | sh
 ```
 
-### 2. Start Ollama Server
-
-In a terminal, run:
+**2. Start Ollama Server:**
 ```bash
 ollama serve
 ```
 
-### 3. Download a Model
-
-In another terminal, download the model you want to use:
+**3. Download a Model:**
 ```bash
 # Modern efficient model (recommended)
 ollama pull gemma3n:e2b
@@ -37,17 +80,23 @@ ollama pull gemma3:27b  # Large, very accurate
 ollama pull gemma2:2b   # Small, fast
 ```
 
-### 4. Install Python Dependencies
+**4. Configure for Ollama:**
+Edit `config.py` and set:
+```python
+DEPLOYMENT_TYPE = "ollama"
+```
 
+**5. Install Python Dependencies:**
 ```bash
 cd Gemma3
 pip install -r requirements.txt
 ```
 
-### 5. Run the Assistant
-
+**6. Run the Assistant:**
 ```bash
-python assistant_ollama.py
+python assistant_ollama.py  # Original version
+# or
+python assistant_podman.py  # Unified version (supports both)
 ```
 
 ## Configuration
@@ -272,16 +321,51 @@ ollama pull gemma2:2b
 
 ```
 Gemma3/
-├── assistant_ollama.py    # Main voice assistant
-├── demo_text.py          # Text-only demo
-├── test_ollama.py        # Connection test
-├── test_audio.py         # Audio test for Jetson
-├── jetson_setup.sh       # Jetson-specific setup
-├── config.py             # Configuration file
-├── requirements.txt      # Python dependencies
-├── setup.sh             # General setup script
-└── README.md            # This file
+├── assistant_ollama.py      # Original voice assistant (Ollama only)
+├── assistant_podman.py      # Unified voice assistant (both deployments)
+├── demo_text.py            # Text-only demo (Ollama)
+├── demo_text_podman.py     # Text-only demo (Podman)
+├── test_ollama.py          # Ollama connection test
+├── test_podman.py          # Podman integration test
+├── test_audio.py           # Audio test for Jetson
+├── podman_manager.py       # Podman container management
+├── llama_client.py         # LLaMA server API client
+├── jetson_setup.sh         # Jetson-specific setup
+├── config.py               # Configuration file
+├── requirements.txt        # Python dependencies
+├── setup.sh               # General setup script
+└── README.md              # This file
 ```
+
+## Podman Deployment Details
+
+The Podman deployment uses a containerized approach with the following advantages:
+
+### Benefits:
+- **Isolation**: Container runs in isolated environment
+- **Reproducibility**: Consistent deployment across systems
+- **Resource Management**: Better control over GPU and memory usage
+- **Flexibility**: Easy to switch between different model configurations
+
+### Architecture:
+1. **Container**: ghcr.io/rakeshmk90/ramalama-jetson:latest
+2. **Server**: llama-server (llama.cpp) with OpenAI-compatible API
+3. **Model**: Gemma-3-4b-it quantized with multimodal support
+4. **API**: Compatible with OpenAI chat completions format
+
+### Container Configuration:
+The Podman container is configured with:
+- GPU acceleration (CUDA)
+- Optimized for Jetson Orin Nano
+- Model files mounted from host filesystem
+- Port mapping for API access (default: 8080)
+
+### Model Files:
+Your Podman command indicates the model files are located at:
+- Main model: `/home/rakesh/.local/share/ramalama/store/huggingface/ggml-org/gemma-3-4b-it-GGUF/blobs/sha256-882e8d2db44dc554fb0ea5077cb7e4bc49e7342a1f0da57901c0802ea21a0863`
+- MMProj model: `/home/rakesh/.local/share/ramalama/store/huggingface/ggml-org/gemma-3-4b-it-GGUF/blobs/sha256-8c0fb064b019a6972856aaae2c7e4792858af3ca4561be2dbf649123ba6c40cb`
+
+Update these paths in `config.py` if your model files are located elsewhere.
 
 ## Contributing
 
