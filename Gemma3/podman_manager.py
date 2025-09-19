@@ -241,7 +241,7 @@ class PodmanManager:
             print(f"Error starting container: {e}")
             return False
     
-    def wait_for_server(self, timeout: int = 60) -> bool:
+    def wait_for_server(self, timeout: int = 300) -> bool:
         """Wait for the model server to be ready"""
         print("Waiting for model server to be ready...")
         start_time = time.time()
@@ -250,12 +250,16 @@ class PodmanManager:
             try:
                 response = requests.get(f"{self.api_url}/health", timeout=5)
                 if response.status_code == 200:
-                    print("Model server is ready!")
+                    print("\n✓ Model server is ready!")
                     return True
             except requests.exceptions.RequestException:
                 pass
             
-            print(".", end="", flush=True)
+            elapsed = int(time.time() - start_time)
+            if elapsed % 10 == 0 and elapsed > 0:
+                print(f"\n[+{elapsed}s] Still loading model...")
+            else:
+                print(".", end="", flush=True)
             time.sleep(2)
         
         print(f"\nTimeout waiting for server to be ready after {timeout} seconds")

@@ -175,6 +175,66 @@ class VectorDatabase:
         
         return results
 
+    def _get_file_hash(self, file_path: str) -> str:
+        """Generate hash for file to track processing"""
+        return hashlib.md5(str(file_path).encode() + str(Path(file_path).stat().st_mtime).encode()).hexdigest()
+
+    def add_pdf(self, pdf_path: str) -> bool:
+        """Process and add a PDF to the knowledge base"""
+        try:
+            # Check if PDF already processed
+            pdf_hash = self._get_file_hash(pdf_path)
+            hash_path = self._get_cache_path(f"pdf_{pdf_hash}")
+
+            if hash_path.exists():
+                print(f"PDF {pdf_path} already processed")
+                return True
+
+            # Process PDF
+            chunks = self.pdf_processor.process_pdf(pdf_path)
+            if not chunks:
+                return False
+
+            # Add chunks to vector database
+            self.add_documents(chunks, source=f"pdf:{Path(pdf_path).name}")
+
+            # Mark PDF as processed
+            with open(hash_path, 'w') as f:
+                f.write(f"Processed at {time.time()}")
+
+            print(f"Successfully added PDF: {pdf_path} ({len(chunks)} chunks)")
+            return True
+
+        except Exception as e:
+            print(f"Error processing PDF {pdf_path}: {e}")
+            return False
+
+    def add_pdf_directory(self, pdf_dir: str) -> int:
+        """Process all PDFs in a directory"""
+        pdf_dir = Path(pdf_dir)
+        if not pdf_dir.exists():
+            print(f"Directory {pdf_dir} does not exist")
+            return 0
+
+        pdf_files = list(pdf_dir.glob("*.pdf"))
+        successful = 0
+
+        for pdf_path in pdf_files:
+            if self.add_pdf(str(pdf_path)):
+                successful += 1
+
+        print(f"Processed {successful}/{len(pdf_files)} PDFs from {pdf_dir}")
+        return successful
+
+    def get_stats(self) -> Dict:
+        """Get database statistics"""
+        return {
+            'total_documents': len(self.documents),
+            'index_size': self.index.ntotal,
+            'sources': list(set(self.document_metadata)),
+            'cache_dir': str(self.cache_dir)
+        }
+
 # Initialize deployment based on configuration
 class AIAssistant:
     def __init__(self):
@@ -324,7 +384,37 @@ class AIAssistant:
         return info
 
 # Initialize global assistant instance
+print("Initializing AI Assistant...")
 assistant = AIAssistant()
+print("AI Assistant initialized successfully!")
+
+# PDF management utility functions
+def add_pdf_to_knowledge_base(pdf_path: str) -> bool:
+    """Add a single PDF to the knowledge base"""
+    return assistant.db.add_pdf(pdf_path)
+
+def load_pdfs_from_directory(pdf_dir: str = None) -> int:
+    """Load all PDFs from a directory"""
+    if pdf_dir is None:
+        pdf_dir = PDF_CONFIG["pdf_directory"]
+    return assistant.db.add_pdf_directory(pdf_dir)
+
+def get_rag_stats() -> Dict:
+    """Get current RAG database statistics"""
+    return assistant.db.get_stats()
+
+def clear_rag_cache():
+    """Clear the RAG cache (useful for testing)"""
+    import shutil
+    cache_dir = PDF_CONFIG["cache_directory"]
+    if os.path.exists(cache_dir):
+        shutil.rmtree(cache_dir)
+        print(f"RAG cache cleared: {cache_dir}")
+
+    # Reinitialize database
+    assistant.db = VectorDatabase(dim=FAISS_CONFIG["dimension"], cache_dir=cache_dir)
+    assistant.db.add_documents(KNOWLEDGE_DOCS, source="config")
+    print("RAG database reinitialized")
 
 # Audio functions (reusing from original)
 def find_device(device_name_substring):
@@ -389,7 +479,7 @@ def text_to_speech(text):
         os.system(f'powershell -Command "Add-Type -AssemblyName System.Speech; (New-Object System.Speech.Synthesis.SpeechSynthesizer).Speak(\'{text}\')"')
 
 def main():
-    print("Voice Assistant with Podman + LLaMA Server")
+    print("Starting Voice Assistant with Podman + LLaMA Server")
     print("Optimized for Jetson Orin Nano")
     print("Press Ctrl+C to exit")
     print("-" * 50)
@@ -398,6 +488,8 @@ def main():
     info = assistant.get_deployment_info()
     print(f"Deployment: {info['deployment_type']} ({info['status']})")
     print("-" * 50)
+    print("Starting voice interaction loop...")
+    print("Speak now!")
     
     while True:
         try:
