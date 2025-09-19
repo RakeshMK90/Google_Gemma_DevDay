@@ -260,6 +260,8 @@ class AIAssistant:
         """Initialize the chosen deployment type"""
         if self.deployment_type == "podman":
             self._initialize_podman()
+        elif self.deployment_type == "direct":
+            self._initialize_direct()
         elif self.deployment_type == "ollama":
             self._initialize_ollama()
         else:
@@ -296,7 +298,24 @@ class AIAssistant:
             raise RuntimeError("Could not connect to LLaMA server")
         else:
             print("✓ Connected to LLaMA server")
-    
+
+    def _initialize_direct(self):
+        """Initialize direct API mode (assumes ramalama already running)"""
+        print("Initializing direct API mode...")
+        print("⚠️  Make sure to start ramalama manually first:")
+        print(f"   ramalama serve --port {PODMAN_CONFIG['port']} {MODEL_NAME}")
+
+        # Create LLaMA client directly
+        self.llama_client = LlamaClient(PODMAN_CONFIG["api_url"])
+
+        # Test connection
+        if not self.llama_client.test_connection():
+            print("✗ Failed to connect to LLaMA server")
+            print("   Start the server with: ramalama serve --port 8080 gemma3:4b")
+            raise RuntimeError("Could not connect to LLaMA server")
+        else:
+            print("✓ Connected to LLaMA server (direct mode)")
+
     def _initialize_ollama(self):
         """Initialize Ollama deployment"""
         print("Initializing Ollama deployment...")
@@ -316,7 +335,7 @@ class AIAssistant:
     
     def ask_model(self, query: str, context: str = "") -> str:
         """Ask the model with context (unified interface)"""
-        if self.deployment_type == "podman":
+        if self.deployment_type == "podman" or self.deployment_type == "direct":
             return self.llama_client.ask_with_context(query, context)
         elif self.deployment_type == "ollama":
             return self._ask_ollama(query, context)
@@ -372,6 +391,14 @@ class AIAssistant:
                 "server_responding": self.llama_client.test_connection() if self.llama_client else False
             })
             info["status"] = "healthy" if info["container_running"] and info["server_responding"] else "unhealthy"
+
+        elif self.deployment_type == "direct":
+            info.update({
+                "api_url": PODMAN_CONFIG["api_url"],
+                "server_responding": self.llama_client.test_connection() if self.llama_client else False,
+                "manual_start_required": True
+            })
+            info["status"] = "healthy" if info["server_responding"] else "unhealthy"
         
         elif self.deployment_type == "ollama":
             try:

@@ -4,7 +4,7 @@ Easy to modify settings without changing the main code
 """
 
 # Deployment Configuration
-DEPLOYMENT_TYPE = "podman"  # Choose: "ollama" or "podman"
+DEPLOYMENT_TYPE = "direct"  # Choose: "ollama", "podman", or "direct"
 
 # Ollama Configuration (legacy)
 OLLAMA_URL = "http://127.0.0.1:11434/api/generate"
